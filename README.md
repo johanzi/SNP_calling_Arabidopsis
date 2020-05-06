@@ -1,6 +1,6 @@
 # SNP_calling_Arabidopsis
-Pipeline for SNP calling using sequencing data from Arabidopsis thaliana
 
+Pipeline for SNP calling using sequencing data from *Arabidopsis thaliana*
 
 - [SHORE pipeline](#shore-pipeline)
   * [Required softwares](#required-softwares)
@@ -30,21 +30,11 @@ This pipeline is based on SHORE ([Ossowski et al., 2008](https://genome.cshlp.or
 ## Alignment
 
 
-The first step is to align the data on a reference genome. In this case, we use the TAIR10 reference for *Arabidopsis thaliana* (accession Col-0). The fasta file can be downloaded on the TAIR10 website: ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/. One should download the files for each chromosomes and concatenate them into one fasta file.
+The first step is to align the data on a reference genome. In this case, we use the TAIR10 reference for *Arabidopsis thaliana* (accession Col-0). The fasta file can be downloaded on the TAIR10 website:
 
 ```
-# Download individual fasta files
-wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr1.fas
-wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr2.fas
-wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr3.fas
-wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr4.fas
-wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chr5.fas
-wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chrC.fas
-wget ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/TAIR10_chrM.fas
-
-# Concatenate into one file
-cat TAIR10_chr1.fas TAIR10_chr2.fas TAIR10_chr3.fas TAIR10_chr4.fas TAIR10_chr5.fas TAIR10_chrC.fas TAIR10_chrM.fas > TAIR10.fa
-
+# Download fasta file
+wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_chromosome_files/TAIR10_chr_all.fas
 ```
 
 ### Generate index files for BWA
@@ -53,29 +43,14 @@ We used BWA for aligning the reads. Check pros and cons for different aligner on
 
 ```
 # Index fasta file of the reference genome (here <reference.fa> should 
-# be the TAIR10.fa file generated above)
+# be the TAIR10_chr_all.fas file generated above)
 bwa index -a bwtsw <reference.fa>
 ``` 
 
 ### Perform the alignment
 
-We used the ALN algorithm but the MEM algorithm can be used as well and seems to be better than ALN (check this [paper](https://arxiv.org/pdf/1303.3997.pdf) from one of BWA creator Heng Li). You need as input the fastq files of the accession of interest.
+All data used to call SNPs were paired-end.
 
-
-For single-end read data:
-```
-# Align reads
-bwa aln -n 0.1 -o 1 <reference.fa>  <fastq_file.fastq> -f <fastq_file.fastq.sai>
-
-# Repetitive hits will be randomly chosen
-bwa samse -r "@RG\tID:$SAMPLE_NAME\tSM:$SAMPLE_NAME" <reference.fa> \
-	<fastq_file.sai> <fastq_file.fastq.sai> > <alignment.sam>  
-
-```
-TO ANDREA: Do we to specify the read group with the -r flag?
-
-
-For paired-end read data:
 ```
 # Align the first read of the pairs
 bwa aln -n 0.1 -o 1 <reference.fa>  <fastq_file_read_1.fastq> -f <fastq_file_read_1.fastq.sai> 
@@ -83,18 +58,15 @@ bwa aln -n 0.1 -o 1 <reference.fa>  <fastq_file_read_1.fastq> -f <fastq_file_rea
 # Align the second read of the pairs
 bwa aln -n 0.1 -o 1 <reference.fa>  <fastq_file_read_2.fastq> -f <fastq_file_read_1.fastq.sai> 
 
-# Repetitive read pairs will be placed randomly
+# Repetitive read pairs will be placed randomly. The maximum insert size is 500 bp
 bwa sampe -a 500 -r "@RG\tID:$SAMPLE_NAME\tSM:$SAMPLE_NAME" <TAIR10.fa> \
 	<fastq_file_read_1.fastq.sai> <fastq_file_read_2.fastq.sai> \
 	 <fastq_file_read_1.fastq>  <fastq_file_read_2.fastq> > <alignment.sam>  
-
-
 ```
 
 ### Convert SAM file to MapList format
 
 SHORE cannot process the SAM file derived from the BWA alignment but uses a MapList file. Check [here](http://shore.sourceforge.net/wiki/index.php/SHORE_File_Formats) for more information on SHORE formats.
-
 
 ```
 # Convert SAM to MapList format 
@@ -102,7 +74,6 @@ shore convert Alignment2Maplist <alignment.sam> --refseq <reference.fa> > <align
 
 # Sort the MapList file
 shore sort --preset maplist --infiles <file.map.list> --inplace
-
 ```
 
 
@@ -134,8 +105,6 @@ shore/./shore consensus \
     -b 0.7 -g 4 -N
 
 ```
-Add details about arguments here.
-
 
 ### Convert SHORE output to VCF
 
@@ -176,9 +145,11 @@ vcf-merge *.vcf.gz | bgzip -c > merged.vcf.gz
 ```
 
 
+## Authors
 
+* **Johan Zicola** - [johanzi](https://github.com/johanzi)
+* **Andrea Fulgione**
 
+## License
 
-
-
-
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
